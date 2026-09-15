@@ -1,0 +1,141 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DiffPT — a differentiable Pink Trombone</title>
+<style>
+:root{--fg:#1a1a1a;--mut:#666;--line:#e2e2e2;--acc:#1F5FA9;--warm:#C8611A;--bg:#fff;--card:#fafafa}
+@media(prefers-color-scheme:dark){:root{--fg:#e8e8e8;--mut:#9a9a9a;--line:#333;--bg:#141414;--card:#1c1c1c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+ font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:3rem 1.25rem 5rem}
+h1{font-size:2rem;margin:0 0 .3rem;letter-spacing:-.02em}
+.lede{color:var(--mut);font-size:1.05rem;margin:0 0 .5rem}
+.meta{color:var(--mut);font-size:.9rem;margin:0 0 2.5rem}
+.meta a{color:var(--acc)}
+h2{font-size:1.3rem;margin:3rem 0 .6rem;padding-bottom:.35rem;border-bottom:2px solid var(--line)}
+h3{font-size:1.05rem;margin:2rem 0 .2rem}
+.sub{color:var(--mut);font-size:.9rem;margin:0 0 .8rem}
+table{border-collapse:collapse;width:100%;font-size:.88rem;margin:.5rem 0 1.5rem}
+th,td{padding:.45rem .5rem;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+thead th{font-weight:600;font-size:.82rem;color:var(--mut);border-bottom:2px solid var(--line)}
+table.aud th:first-child{white-space:nowrap;font-weight:600}
+table.aud th span{display:block;font-weight:400;color:var(--mut);font-size:.78rem}
+audio{height:30px;width:170px}
+table.ob td:first-child{width:2rem;color:var(--mut);font-variant-numeric:tabular-nums}
+table.ob td:nth-child(2){font-weight:600;white-space:nowrap}
+.tag{display:inline-block;padding:.1rem .45rem;border-radius:3px;font-size:.75rem;font-weight:600}
+.cost{background:#FEE6CE;color:#8a4a12}.free{background:#DEEBF7;color:#1F5FA9}
+@media(prefers-color-scheme:dark){.cost{background:#4a3520;color:#f0c79a}.free{background:#1e3350;color:#9ec5f0}}
+img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:4px;margin:.5rem 0}
+code{background:var(--card);padding:.12rem .35rem;border-radius:3px;font-size:.88em}
+pre{background:var(--card);padding:.9rem 1rem;border-radius:5px;overflow-x:auto;font-size:.85rem;line-height:1.5}
+pre code{background:none;padding:0}
+.note{background:var(--card);border-left:3px solid var(--warm);padding:.7rem 1rem;margin:1rem 0;font-size:.92rem}
+footer{margin-top:4rem;padding-top:1.5rem;border-top:1px solid var(--line);color:var(--mut);font-size:.85rem}
+</style></head><body><div class="wrap">
+
+<h1>DiffPT</h1>
+<p class="lede">A differentiable Pink Trombone — the complete waveguide, nasal branch,
+turbulence and bursts included, made trainable.</p>
+<p class="meta">Supplementary material for <em>A Differentiable Pink Trombone for
+Articulatory Inversion without Articulatory Supervision</em> (ICASSP 2027, under review)
+&nbsp;·&nbsp; <a href="https://github.com/slash-trombone/diffpt">source code</a></p>
+
+<h2>Four things in Pink Trombone resist differentiation</h2>
+<p class="sub">The paper states this in a sentence. Here is each one, and only two of them cost anything.</p>
+
+<table class="ob"><tbody>
+<tr><td>1</td><td>The scattering recursion<br><span class="tag cost">costs</span></td>
+<td><b>Why it blocks a gradient.</b> The waveguide advances two steps per output sample,
+so one second of audio at 48 kHz is a chain of 96,000 dependent updates. Every quantity we
+need a gradient for lies inside that chain.<br>
+<b>What we do.</b> Pink Trombone is already controlled at a block rate: it recomputes the
+junction reflections once per control block and ramps linearly between blocks. Hold the
+reflections at a fixed point on that ramp and the tract becomes linear and time-invariant,
+so the block is a fixed filter. Its 512-sample impulse response is computed once and applied
+by convolution. Six anchors per frame are evaluated independently and cross-faded at the
+sample rate; the triangular cross-fade satisfies the constant-overlap-add condition, so the
+effective response stays continuous across sub-frame and frame boundaries.<br>
+<b>What it buys.</b> The longest chain of dependent operations becomes 1024 waveguide steps
+behind a single 512-sample impulse response, whatever the utterance length, and blocks
+evaluate in parallel.</td></tr>
+
+<tr><td>2</td><td>Turbulence and burst gating<br><span class="tag cost">costs</span></td>
+<td><b>Why it blocks a gradient.</b> Two separate reasons, often conflated. First, the
+injection site: Pink Trombone places turbulence using the constriction list its interface
+supplies, and that list is handed in per frame — it is <em>not</em> a function of the tract
+shape, so there is no derivative to take. An inverter emitting only diameters has no such
+list. Second, bursts: the reference fires a transient only at exact closure
+(<code>diameter &lt;= 0</code>), and a bounded output cannot reach zero — in our bin grid
+the lowest reachable diameter is 0.010, and 12 of the 44 sections floor above 0.05.<br>
+<b>What we do.</b> Apply the same diameter-dependent gate to every section and let the
+weighting find the constrictions. The gate is band-pass in diameter — zero at
+<code>d &ge; 0.4</code> and zero at full closure, peaking near <code>d &approx; 0.2</code> —
+so weighting every section self-gates down to the actual constrictions with no rounding and
+no argmin. Bursts release at a diameter of 0.05.</td></tr>
+
+<tr><td>3</td><td>The glottal source<br><span class="tag free">exact</span></td>
+<td><b>Why it looks like a problem.</b> The Liljencrants–Fant model is piecewise: an open
+phase and a return phase, split at <code>t = T<sub>e</sub></code>.<br>
+<b>Why it is not one.</b> The split is on <em>time within a pitch period</em>. The tract
+diameters never enter that function, so with respect to the quantities we differentiate it
+is not piecewise at all. Both branches are evaluated and blended by a mask.</td></tr>
+
+<tr><td>4</td><td>Velum coupling<br><span class="tag free">exact</span></td>
+<td><b>Why it looks like a problem.</b> The nasal branch joins the oral tract at a three-way
+junction, which sounds like it needs a discrete decision.<br>
+<b>Why it is not one.</b> The junction reflections are an algebraic function of the three
+cross-sectional areas, differentiable everywhere the areas are positive, and the velum is
+simply one coordinate of the diameter vector.</td></tr>
+</tbody></table>
+
+<div class="note"><b>One porting difference, separate from differentiability.</b> The
+reference computes the first <em>internal</em> nasal reflection once at initialisation,
+before the velum value is written into the nasal diameter array, so it stays frozen for the
+whole run. We recompute it from the velum every frame. The two coincide at a velum of 0.40
+and diverge below it.</div>
+
+<h2>Training</h2>
+<img src="model_flow.png" alt="DiffPT training flow: two arms sharing an encoder and decoder, diverging only at the read-out">
+<p class="sub">Both arms share the batch, the encoder, the decoder trunk and nine of the
+eleven loss weights. They diverge only at the read-out. On the real half of every batch
+nothing supervises the geometry except the acoustics.</p>
+
+<h2>Audio samples</h2>
+<p class="sub">Every row: the original recording, then resynthesis from each arm's recovered
+geometry, then the per-utterance optimisation baseline — all four through the same
+44-section tube.</p>
+<h3>Fast speaking rate</h3><p class="sub">The rate at which the block-rate approximation costs most, and the rate at which the recogniser itself reads worst.</p><table class="aud"><thead><tr><th></th><th>Natural</th><th>DiffPT-reg</th><th>DiffPT-cls</th><th>VocalTrax</th></tr></thead><tbody><tr><th>UGU<span>Abhinav · fast</span></th><td><audio controls preload="none" src="audio/Abhinav_UGU_fast_1__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_UGU_fast_1__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_UGU_fast_1__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_UGU_fast_1__vocaltrax.wav"></audio></td></tr><tr><th>EGE<span>Aishwarya · fast</span></th><td><audio controls preload="none" src="audio/Aishwarya_EGE_fast_2__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_EGE_fast_2__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_EGE_fast_2__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_EGE_fast_2__vocaltrax.wav"></audio></td></tr><tr><th>ETE<span>Aishwarya · fast</span></th><td><audio controls preload="none" src="audio/Aishwarya_ETE_fast_2__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_ETE_fast_2__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_ETE_fast_2__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_ETE_fast_2__vocaltrax.wav"></audio></td></tr><tr><th>UDU<span>Aishwarya · fast</span></th><td><audio controls preload="none" src="audio/Aishwarya_UDU_fast_1__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_UDU_fast_1__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_UDU_fast_1__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_UDU_fast_1__vocaltrax.wav"></audio></td></tr></tbody></table><h3>Nasal consonants</h3><p class="sub">The velum couples the nasal branch; the corpus labels these frames and a pairwise margin uses that ordering.</p><table class="aud"><thead><tr><th></th><th>Natural</th><th>DiffPT-reg</th><th>DiffPT-cls</th><th>VocalTrax</th></tr></thead><tbody><tr><th>AMA<span>Abhinav · normal</span></th><td><audio controls preload="none" src="audio/Abhinav_AMA_normal_2__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AMA_normal_2__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AMA_normal_2__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AMA_normal_2__vocaltrax.wav"></audio></td></tr><tr><th>ANgA<span>Abhinav · fast</span></th><td><audio controls preload="none" src="audio/Abhinav_ANgA_fast_1__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_ANgA_fast_1__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_ANgA_fast_1__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_ANgA_fast_1__vocaltrax.wav"></audio></td></tr><tr><th>OMO<span>Abhinav · normal</span></th><td><audio controls preload="none" src="audio/Abhinav_OMO_normal_2__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_OMO_normal_2__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_OMO_normal_2__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_OMO_normal_2__vocaltrax.wav"></audio></td></tr><tr><th>UNU<span>Abhinav · fast</span></th><td><audio controls preload="none" src="audio/Abhinav_UNU_fast_1__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_UNU_fast_1__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_UNU_fast_1__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_UNU_fast_1__vocaltrax.wav"></audio></td></tr></tbody></table><h3>Stops</h3><p class="sub">A complete closure and a release. The per-utterance baseline scores 5.9% here, which is chance.</p><table class="aud"><thead><tr><th></th><th>Natural</th><th>DiffPT-reg</th><th>DiffPT-cls</th><th>VocalTrax</th></tr></thead><tbody><tr><th>ABA<span>Abhinav · normal</span></th><td><audio controls preload="none" src="audio/Abhinav_ABA_normal_1__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_ABA_normal_1__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_ABA_normal_1__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_ABA_normal_1__vocaltrax.wav"></audio></td></tr><tr><th>ADA<span>Abhinav · normal</span></th><td><audio controls preload="none" src="audio/Abhinav_ADA_normal_1__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_ADA_normal_1__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_ADA_normal_1__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_ADA_normal_1__vocaltrax.wav"></audio></td></tr><tr><th>AGA<span>Abhinav · slow</span></th><td><audio controls preload="none" src="audio/Abhinav_AGA_slow_1__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AGA_slow_1__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AGA_slow_1__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AGA_slow_1__vocaltrax.wav"></audio></td></tr><tr><th>AKA<span>Abhinav · slow</span></th><td><audio controls preload="none" src="audio/Abhinav_AKA_slow_0__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AKA_slow_0__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AKA_slow_0__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AKA_slow_0__vocaltrax.wav"></audio></td></tr></tbody></table><h3>Female speakers</h3><p class="sub">The tract length is fixed at 16.18 cm for every speaker.</p><table class="aud"><thead><tr><th></th><th>Natural</th><th>DiffPT-reg</th><th>DiffPT-cls</th><th>VocalTrax</th></tr></thead><tbody><tr><th>AFA<span>Aishwarya · fast</span></th><td><audio controls preload="none" src="audio/Aishwarya_AFA_fast_0__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_AFA_fast_0__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_AFA_fast_0__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_AFA_fast_0__vocaltrax.wav"></audio></td></tr><tr><th>AMA<span>Aishwarya · fast</span></th><td><audio controls preload="none" src="audio/Aishwarya_AMA_fast_2__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_AMA_fast_2__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_AMA_fast_2__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_AMA_fast_2__vocaltrax.wav"></audio></td></tr><tr><th>ASA<span>Aishwarya · slow</span></th><td><audio controls preload="none" src="audio/Aishwarya_ASA_slow_0__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_ASA_slow_0__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_ASA_slow_0__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Aishwarya_ASA_slow_0__vocaltrax.wav"></audio></td></tr></tbody></table><h3>Male speakers</h3><p class="sub">Shown for contrast with the row above.</p><table class="aud"><thead><tr><th></th><th>Natural</th><th>DiffPT-reg</th><th>DiffPT-cls</th><th>VocalTrax</th></tr></thead><tbody><tr><th>AChA<span>Abhinav · slow</span></th><td><audio controls preload="none" src="audio/Abhinav_AChA_slow_2__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AChA_slow_2__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AChA_slow_2__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AChA_slow_2__vocaltrax.wav"></audio></td></tr><tr><th>AFA<span>Abhinav · normal</span></th><td><audio controls preload="none" src="audio/Abhinav_AFA_normal_0__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AFA_normal_0__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AFA_normal_0__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AFA_normal_0__vocaltrax.wav"></audio></td></tr><tr><th>AJhA<span>Abhinav · slow</span></th><td><audio controls preload="none" src="audio/Abhinav_AJhA_slow_0__natural.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AJhA_slow_0__diffpt_reg.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AJhA_slow_0__diffpt_cls.wav"></audio></td><td><audio controls preload="none" src="audio/Abhinav_AJhA_slow_0__vocaltrax.wav"></audio></td></tr></tbody></table>
+
+<h2>The full measurement tables</h2>
+<p class="sub">The paper reports four measures. These are all six, including STOI and
+ViSQOL's audio mode, which the paper does not use.</p>
+<img src="6metric_T1_rate.png" alt="All six measures by speaking rate">
+<img src="6metric_T2_gender.png" alt="All six measures by speaker gender">
+<img src="6metric_T3_stratum.png" alt="Consonant identification by corpus stratum">
+<img src="6metric_T4_config.png" alt="Configuration of each vocal-tract model">
+
+<h2>Using the renderer</h2>
+<pre><code>import torch
+from diff_pt_v2.components.audio_system import DifferentiableAudioSystem
+
+renderer = DifferentiableAudioSystem()      # 44 oral + 28 nasal, 48 kHz internal, 16 kHz out
+
+vtd = torch.full((1, T, 45), 0.6)           # velum + 44 oral diameters, per frame
+vtd[0, :, 21:25] = 0.15                     # a constriction
+voi = torch.full((1, T), 0.9)
+f0  = torch.full((1, T), 120.0)
+
+vtd.requires_grad_(True)
+audio = renderer(vtd, voi, f0)
+audio.pow(2).mean().backward()              # the gradient reaches vtd</code></pre>
+<div class="note">Set <code>DIFFPT_DISABLE_COMPILE=1</code>. <code>torch.compile</code>
+unrolls the 512-step impulse-response loop into a graph of 5000+ nodes; compilation took
+362 s on CPU and did not finish on a GPU.</div>
+
+<footer>
+The original Pink Trombone is by Neil Thapen. The synthetic corpus was generated with the
+Node.js Pink Trombone server of Cámara et al., which is linked rather than vendored.
+Code released under MIT.
+</footer>
+</div></body></html>
