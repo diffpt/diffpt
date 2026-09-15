@@ -1,4 +1,4 @@
-# V34 — K-anchor anti-aliasing ablation (thesis §X.10.2)
+# V34 — K-anchor anti-aliasing ablation 
 
 **Type:** local, no-training experiment. **Date started:** 2026-06-16.
 **Script:** `diff_pt_v2/tests/test_v34_kanchor_antialiasing.py`
@@ -10,12 +10,12 @@ The artefact is the **amplitude-modulation line at the 50 Hz frame rate**. It is
 the rest of the programme measures it (`res_local/analyze_tremor.py`): Hilbert envelope → down-sample
 to 1 kHz → periodogram → `env_50Hz_above_floor` = mean[48–52 Hz] − mean[200–400 Hz] floor, in dB.
 
-**Design note (corrected from the chapter wording).** §X.10.2 says the PSD test "holds the diameter
+**Design note (corrected from the chapter wording).** §the original plan says the PSD test "holds the diameter
 constant". A *truly* constant diameter makes every per-frame anchor IR identical, so there is no
 frame-boundary discontinuity and hence **no** 50 Hz line for any K — a null test. To exercise the
 artefact (and the O((Δr/K)²) law) the diameter must change between frames. The PSD test therefore
 uses a **constant glottal excitation (120 Hz impulse train) + a controlled linear diameter ramp**
-(constant Δ per frame). The chapter's X.10.2 wording will be updated to match.
+(constant Δ per frame). The chapter's the original plan wording will be updated to match.
 
 ---
 
@@ -53,9 +53,9 @@ reconstructed via `_compute_reflections → _run_ir_loop → _frame_aligned_conv
 | K-anchor K=5 | −16.71 dB |
 | K-anchor K=10 | −16.49 dB |
 
-**现象:** the cross-fade lowers the 50 Hz line by **≈6 dB** vs the hard-switch (−10.8 → −16.7 at K=5).
+**Observed:** the cross-fade lowers the 50 Hz line by **≈6 dB** vs the hard-switch (−10.8 → −16.7 at K=5).
 K=1 gets only half of that (−13.6); K≥2 reaches the full reduction and then plateaus.
-**含义:** the K-anchor *does* act as an anti-frame-rate mechanism (the cross-fade is the lever), and
+**Means:** the K-anchor *does* act as an anti-frame-rate mechanism (the cross-fade is the lever), and
 the benefit saturates by K≈2. NB all values are *below* the broadband envelope floor — in this
 synthetic impulse-train/uniform-tube setup the artefact is weaker in absolute terms than the
 real-speech +15 dB; the **relative** 6 dB is the valid result.
@@ -71,24 +71,24 @@ real-speech +15 dB; the **relative** 6 dB is the valid result.
 | 16 | −23.19 dB |
 | (hard-switch ref) | −13.97 dB |
 
-**现象:** on fast dynamics K **does** matter, but not the way X.10.2 predicts. **K=1 is the worst**
+**Observed:** on fast dynamics K **does** matter, but not the way the original plan predicts. **K=1 is the worst**
 (−6.3 dB, ~8 dB worse than K=5, and even worse than the hard-switch): a single full-frame linear
 segment lags and itself modulates at the frame rate. **K≥2 captures the benefit and plateaus**
 (−19 to −23 dB, ±~4 dB measurement wiggle), so the default **K=5 sits safely on the plateau**.
-**含义:** the operative justification for K=5 is "K=1 is insufficient, K≥2 suffices, K=5 is safe and
-cheap" — **not** the monotonic decrease / slope −2 / asymptote-at-K≈20 story in X.10.2.
+**Means:** the operative justification for K=5 is "K=1 is insufficient, K≥2 suffices, K=5 is safe and
+cheap" — **not** the monotonic decrease / slope −2 / asymptote-at-K≈20 story in the original plan.
 
 ### Test 3 — step transient (hard-switch vs K=5)
 hard-switch peak |d(env)/dt| = 0.104; K=5 = 0.108; ratio 0.97 (≈ 1).
-**现象:** inconclusive — this envelope-slope metric does not distinguish the two (it is dominated by
-the impulse-train excitation near the step, not the filter switch). **含义:** the step test as
+**Observed:** inconclusive — this envelope-slope metric does not distinguish the two (it is dominated by
+the impulse-train excitation near the step, not the filter switch). **Means:** the step test as
 designed is not diagnostic; needs a different observable (e.g. the per-sample effective-IR
 trajectory) or should be dropped.
 
 ---
 
-## 下一步 (next steps)
-1. **X.10.2 needs rewriting** — its three predictions (monotonic 50 Hz decrease with K, log-log
+## Next steps
+1. **the original plan needs rewriting** — its three predictions (monotonic 50 Hz decrease with K, log-log
    slope −2, asymptote near K≈20) are **not** what the code does. The defensible, evidence-backed
    claims are: (a) the cross-fade suppresses the frame-rate line by ~6 dB vs a hard-switch;
    (b) K=1 is insufficient, K≥2 suffices, K=5 is the safe cheap default. Flag to user before editing
@@ -97,7 +97,7 @@ trajectory) or should be dropped.
    50 Hz level is comparable to the real-speech +15 dB, not below-floor.
 3. Redesign or drop Test 3 (step) — current metric non-diagnostic.
 
-## 门槛 (decision gate)
+## Decision gate
 The K-anchor's value as a frame-rate-artefact fix is **confirmed in relative terms** (cross-fade −6 dB
 vs hard-switch; K≥2 needed). The chapter's specific K-scaling claims are **falsified for the current
 code** and must be replaced. No code change to the waveguide is warranted — K=5 is justified.
@@ -117,11 +117,11 @@ loaded sample was nasalised). Replaces the synthetic impulse-train + uniform tub
 | smooth 5 Hz wobble | −21.22 | −21.98 | −21.96 | −21.98 | −21.98 | **+0.76 dB** |
 | frame-rate jitter (model-like) | −11.73 | −11.48 | −17.09 | −17.17 | −17.13 | **+5.44 dB** |
 
-**现象:** the artefact is governed by **how jittery the VTD is frame-to-frame**. Smooth motion → the
+**Observed:** the artefact is governed by **how jittery the VTD is frame-to-frame**. Smooth motion → the
 cross-fade barely matters (+0.8 dB). **Per-frame jitter** (i.i.d. perturbation on mid-oral dims,
 mimicking the model's noisy predictions) → the cross-fade suppresses the 50 Hz line by **+5.4 dB**,
 and **K=1 is insufficient** (−11.48, ≈ hard-switch) while **K≥2 captures the benefit** (−17), K=5 safe.
-**含义:** matches the programme's original diagnosis exactly — the +15 dB tremor came from the model
+**Means:** matches the programme's original diagnosis exactly — the +15 dB tremor came from the model
 predicting *frame-rate-noisy* VTDs (which `L_temp` later smoothed); the K-anchor's role is to stop that
 jitter aliasing into a 50 Hz line. Smooth articulation never needed it.
 
@@ -166,10 +166,10 @@ Code read of `waveguide.py` + `glottis.py` settled three items; two needed measu
 | jitter | hard | 4.9 | 13.3 | 9.7 | 2.8 | 13.8 | 4.2 | 15.1 |
 | jitter | K=5  | 5.1 | 10.1 | 6.9 | 4.2 | 16.1 | 2.0 | 15.6 |
 
-*现象:* no dominant new 250 Hz line — K=5 *lowers* the low-freq frame-rate lines (50/100/150)
+*Observed:* no dominant new 250 Hz line — K=5 *lowers* the low-freq frame-rate lines (50/100/150)
 on smooth wobble; at 250 Hz it is at most +2.3 dB vs hard under heavy jitter and *lower* on smooth.
 (Caveat: per-harmonic envelope numbers are confounded by the F0=120 excitation; robust read =
-"no prominent K·50 line.") *含义:* the C0-but-not-C1 sub-frame discontinuity is benign — its
+"no prominent K·50 line.") *Means:* the C0-but-not-C1 sub-frame discontinuity is benign — its
 energy ∝ Δr/K and sits at 250 Hz, above the slow-tremor band. The cross-fade trades the dominant
 50 Hz hard-switch line for, at worst, a marginal high-freq ripple. K=5 validated.
 
@@ -181,14 +181,14 @@ energy ∝ Δr/K and sits at 250 Hz, above the slow-tremor band. The cross-fade 
 | near_closure 0.02 (interior) | 0.052% | 465 taps | 0.312 dB |
 | **lip_near_closed 0.05** | **25.8%** | **1988 taps (41 ms)** | **1.454 dB** |
 
-*现象:* 512 taps (10.7 ms) captures ≥99.9% of IR energy for open vowels and **interior**
+*Observed:* 512 taps (10.7 ms) captures ≥99.9% of IR energy for open vowels and **interior**
 constrictions (LSD < 0.32 dB, negligible). A sustained **LIP** near-closure (bilabial config,
 oral segment 44 = 0.05) rings to ~2000 taps: **26% of IR energy is beyond tap 512, LSD = 1.45 dB.**
-*含义:* sealing the radiating END makes a high-Q resonator; an interior constriction still loses
+*Means:* sealing the radiating END makes a high-Q resonator; an interior constriction still loses
 energy out the open lip and decays fast. So 512-tap truncation is negligible everywhere **except a
 held bilabial closure** — which is itself a near-silent / low-radiation regime, and closures are
 brief, so practical impact is bounded. Still a real, documentable approximation error at bilabial
-configs. *下一步:* optional — `n_ir_samples ≥ 2048` if bilabial-closure fidelity matters (≈4× cost),
+configs. *Next:* optional — `n_ir_samples ≥ 2048` if bilabial-closure fidelity matters (≈4× cost),
 else accept as a documented limitation. The chapter's "512 ≈ longer than a frame's ringing" wording
-should be softened to "adequate except for a sustained lip near-closure." *门槛:* no code change
+should be softened to "adequate except for a sustained lip near-closure." *Gate:* no code change
 forced; 512 stays default. Flagged for the chapter as an honest bound + a possible config knob.
