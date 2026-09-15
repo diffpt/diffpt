@@ -6,7 +6,7 @@ complete waveguide — nasal branch, turbulence and bursts included — and make
 gradient reach the vocal-tract geometry.
 
 This is the renderer from *A Differentiable Pink Trombone for Articulatory Inversion
-without Articulatory Supervision* (ICASSP 2027, under review).
+without Articulatory Supervision* (preprint in preparation).
 
 ## Why the original resists differentiation
 
@@ -73,15 +73,7 @@ The original Pink Trombone is by Neil Thapen.
 
 ## Citation
 
-```bibtex
-@inproceedings{xu2027diffpt,
-  author    = {Zhiyuan Xu},
-  title     = {A Differentiable {Pink Trombone} for Articulatory Inversion
-               without Articulatory Supervision},
-  booktitle = {Proc. IEEE Int. Conf. Acoustics, Speech and Signal Processing (ICASSP)},
-  year      = {2027}
-}
-```
+A preprint is in preparation; citation details will be added here once it is available.
 
 ## License
 
