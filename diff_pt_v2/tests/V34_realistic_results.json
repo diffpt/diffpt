@@ -1,0 +1,67 @@
+{
+  "vowel_base": {
+    "velum": 0.4,
+    "oral_mean": 1.211,
+    "source": "worker0_batch0000.npz"
+  },
+  "test1": {
+    "smooth_5Hz_wobble": {
+      "hardswitch": -21.22,
+      "kanchor": {
+        "K=1": -21.98,
+        "K=2": -21.96,
+        "K=5": -21.98,
+        "K=10": -21.98
+      },
+      "hard_minus_K5": 0.76
+    },
+    "frame_rate_jitter": {
+      "hardswitch": -11.73,
+      "kanchor": {
+        "K=1": -11.48,
+        "K=2": -17.09,
+        "K=5": -17.17,
+        "K=10": -17.13
+      },
+      "hard_minus_K5": 5.44
+    }
+  },
+  "test2": {
+    "rows": [
+      {
+        "K": 1,
+        "db50": -21.16
+      },
+      {
+        "K": 2,
+        "db50": -20.81
+      },
+      {
+        "K": 3,
+        "db50": -20.8
+      },
+      {
+        "K": 5,
+        "db50": -20.77
+      },
+      {
+        "K": 8,
+        "db50": -20.71
+      },
+      {
+        "K": 16,
+        "db50": -20.71
+      }
+    ],
+    "hardswitch_db50": -20.05,
+    "spread_db": 0.45
+  },
+  "test3": {
+    "peak_slope": {
+      "hard-switch": 0.031861,
+      "K-anchor K=5": 0.037902
+    },
+    "ratio_hard_over_K5": 0.84
+  },
+  "total_seconds": 26.9
+}

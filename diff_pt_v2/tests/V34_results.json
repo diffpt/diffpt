@@ -1,0 +1,63 @@
+{
+  "test1_hardswitch_vs_crossfade": [
+    {
+      "config": "hard-switch",
+      "db50": -10.77
+    },
+    {
+      "config": "K-anchor K=1",
+      "db50": -13.6
+    },
+    {
+      "config": "K-anchor K=2",
+      "db50": -16.81
+    },
+    {
+      "config": "K-anchor K=5",
+      "db50": -16.71
+    },
+    {
+      "config": "K-anchor K=10",
+      "db50": -16.49
+    }
+  ],
+  "test2_does_K_matter": {
+    "rows": [
+      {
+        "K": 1,
+        "db50": -6.28
+      },
+      {
+        "K": 2,
+        "db50": -23.8
+      },
+      {
+        "K": 3,
+        "db50": -19.48
+      },
+      {
+        "K": 5,
+        "db50": -22.09
+      },
+      {
+        "K": 8,
+        "db50": -22.61
+      },
+      {
+        "K": 16,
+        "db50": -23.19
+      }
+    ],
+    "hardswitch_db50": -13.97,
+    "spread_db": 17.52
+  },
+  "test3_step": {
+    "peak_slope": {
+      "hard-switch": 0.104356,
+      "K-anchor K=5": 0.107967
+    },
+    "ratio_hard_over_K5": 0.97,
+    "samples_per_subframe_K5": 192
+  },
+  "total_seconds": 20.6
+}
